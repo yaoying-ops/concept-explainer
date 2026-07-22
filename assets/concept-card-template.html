@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>概念讲解卡片</title>
+<style>
+  :root{
+    --paper:#f5f2ea;        /* 纸张米白 */
+    --card:#fffefb;         /* 近白卡片 */
+    --ink:#2b2b28;          /* 正文墨色 */
+    --ink-soft:#5c584f;     /* 次级文字 */
+    --blue:#2f4b6e;         /* 学术深蓝（主色） */
+    --green:#2f6f4f;        /* 松绿（代码/正解） */
+    --rust:#a6571f;         /* 赭石（误解） */
+    --line:#e3ddcf;         /* 米色分隔线 */
+    --serif:"Source Han Serif SC","Noto Serif SC","Songti SC","SimSun",serif;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--paper);color:var(--ink);font-family:var(--serif);
+    line-height:1.75;padding:0 0 72px;letter-spacing:.01em;
+  }
+  .wrap{max-width:1040px;margin:0 auto;padding:0 24px;}
+
+  /* 顶部筛选控制条（吸顶） */
+  .controls{
+    position:sticky;top:0;z-index:10;
+    background:rgba(245,242,234,.94);
+    backdrop-filter:blur(4px);
+    border-bottom:1px solid var(--line);
+    padding:12px 0 14px;margin-bottom:36px;
+  }
+  .controls .row{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:center;}
+  .ctrl-group{display:flex;align-items:center;gap:8px;}
+  .ctrl-group .lbl{font-size:13px;color:var(--ink-soft);letter-spacing:.1em;}
+  .ctrl-btn{
+    font-family:var(--serif);font-size:13px;color:var(--blue);
+    background:transparent;border:1px solid var(--blue);border-radius:999px;
+    padding:3px 14px;cursor:pointer;transition:.15s;letter-spacing:.04em;
+  }
+  .ctrl-btn:hover{background:rgba(47,75,110,.08);}
+  .ctrl-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+  header.doc-head{
+    text-align:center;margin-bottom:32px;padding-top:8px;
+    padding-bottom:20px;border-bottom:1px solid var(--line);
+  }
+  header.doc-head h1{font-size:34px;font-weight:700;letter-spacing:.08em;color:var(--blue);}
+  header.doc-head .sub{margin-top:10px;font-size:15px;color:var(--ink-soft);letter-spacing:.04em;}
+  header.doc-head .chips{margin-top:12px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+  header.doc-head .chip{
+    font-size:12px;letter-spacing:.1em;color:var(--blue);
+    border:1px solid var(--blue);border-radius:999px;padding:2px 12px;
+  }
+  header.doc-head .rule{width:64px;height:2px;background:var(--blue);margin:16px auto 0;opacity:.7;}
+
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;}
+  @media(max-width:760px){ .grid{grid-template-columns:1fr;} }
+
+  section.card{
+    background:var(--card);border:1px solid var(--line);border-radius:6px;
+    padding:24px 26px 28px;box-shadow:0 1px 3px rgba(47,75,110,.06);
+  }
+  .card .tag{
+    display:inline-block;font-size:12px;letter-spacing:.18em;color:var(--blue);
+    border:1px solid var(--blue);border-radius:999px;padding:2px 12px;margin-bottom:12px;
+  }
+  .card h2{font-size:20px;font-weight:700;color:var(--ink);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+  .card p{margin-bottom:10px;color:var(--ink-soft);}
+  .card p:last-child{margin-bottom:0;}
+
+  .card code{font-family:var(--mono);font-size:.86em;background:#f0ece1;border-radius:3px;padding:1px 5px;color:var(--green);}
+  pre.diagram{font-family:var(--mono);font-size:13px;line-height:1.5;background:#f3efe6;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:14px 16px;overflow-x:auto;white-space:pre;margin-bottom:10px;}
+  pre code{display:block;font-family:var(--mono);font-size:13px;line-height:1.6;background:#1f2a36;color:#e8e2d4;border-radius:5px;padding:16px 18px;overflow-x:auto;}
+  pre code .c{color:#8aa0b6;}
+  pre code .k{color:#e0a96d;}
+  pre code .s{color:#9ec6a0;}
+  pre code .n{color:#c9b48a;}
+  p.run{font-size:13px;color:var(--green);}
+  p.run::before{content:"▶ 运行预期：";font-weight:700;}
+
+  ul.miscon{list-style:none;}
+  ul.miscon li{margin-bottom:12px;padding-left:14px;border-left:3px solid var(--rust);}
+  ul.miscon li:last-child{margin-bottom:0;}
+  ul.miscon .mis{color:var(--rust);}
+  ul.miscon .fix{color:var(--green);}
+
+  /* 进阶内容（随难度显示）+ 受众专属提示 */
+  .adv{display:none;border-top:1px dashed var(--line);margin-top:14px;padding-top:12px;}
+  .adv.show{display:block;}
+  .callout{
+    display:none;margin-top:12px;padding:10px 14px;border-left:3px solid var(--blue);
+    background:rgba(47,75,110,.05);border-radius:0 5px 5px 0;font-size:14px;color:var(--ink-soft);
+  }
+  .callout.show{display:block;}
+  .callout .who{font-size:12px;letter-spacing:.1em;color:var(--blue);display:block;margin-bottom:4px;}
+
+  .hint{text-align:center;font-size:12px;color:var(--ink-soft);margin:18px 0 28px;letter-spacing:.04em;}
+  footer.doc-foot{margin-top:40px;text-align:center;font-size:12px;color:var(--ink-soft);letter-spacing:.05em;}
+</style>
+</head>
+<body>
+<!-- 筛选控制条：data-default-aud / data-default-diff 由生成时按受众与难度填写（data-default-diff 必须为数字：易=0/中=1/难=2，不能是中文，否则 parseInt 得 NaN → 显示 undefined） -->
+<div class="controls" id="controls" data-default-aud="大学生" data-default-diff="1">
+  <div class="row">
+    <div class="ctrl-group">
+      <span class="lbl">受众</span>
+      <button class="ctrl-btn" data-aud="中学生">中学生</button>
+      <button class="ctrl-btn" data-aud="大学生">大学生</button>
+      <button class="ctrl-btn" data-aud="自学者">自学者</button>
+      <button class="ctrl-btn" data-aud="教师">教师</button>
+    </div>
+    <div class="ctrl-group">
+      <span class="lbl">难度</span>
+      <button class="ctrl-btn" data-diff="0">易</button>
+      <button class="ctrl-btn" data-diff="1">中</button>
+      <button class="ctrl-btn" data-diff="2">难</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <header class="doc-head">
+    <h1>概念名</h1>
+    <div class="sub">学科（如：计算机）</div>
+    <div class="chips">
+      <span class="chip" id="chip-aud">受众：大学生</span>
+      <span class="chip" id="chip-diff">难度：中</span>
+    </div>
+    <div class="rule"></div>
+  </header>
+
+  <p class="hint">▲ 顶部可切换「受众 / 难度」筛选：进阶内容（中 / 难）与受众专属提示会随之显隐。</p>
+
+  <div class="grid">
+
+    <!-- 卡片 1：生活类比 -->
+    <section class="card">
+      <span class="tag">生活类比</span>
+      <h2>把抽象拽进日常</h2>
+      <p>在此填入生活类比叙述（基础层，所有难度都显示）。先描述日常场景，再点明"哪个现象对应概念的哪个要素"。</p>
+
+      <!-- 进阶：难度≥中 显示 -->
+      <div class="adv" data-depth="1">
+        <p>进阶类比（难度=中/难时显示）：用一个更贴近专业语境的场景，深化映射关系。</p>
+      </div>
+      <!-- 受众专属提示 -->
+      <div class="callout" data-aud="中学生"><span class="who">给中学生的话</span>用最生活的比喻，先别提术语；把"锁"说成"钥匙/排队"即可。</div>
+      <div class="callout" data-aud="教师"><span class="who">讲授建议</span>此处可放课堂引入话术或常见提问预设。</div>
+    </section>
+
+    <!-- 卡片 2：示意图描述 -->
+    <section class="card">
+      <span class="tag">示意图描述</span>
+      <h2>一张图看懂</h2>
+      <p>下方为 ASCII / 流程示意（基础层），文字说明其元素与箭头含义。</p>
+<pre class="diagram">A ──▶ B ──▶ C
+▲            │
+└────────────┘
+（示例：用箭头表示流转/依赖方向）</pre>
+      <p>说明：A 到 B 表示…，B 到 C 表示…，闭环/箭头方向对应概念中的…。</p>
+
+      <div class="adv" data-depth="2">
+        <p>进阶示意（难度=难时显示）：叠加状态/时序维度，例如把环路等待画成时间轴上的资源占用。</p>
+<pre class="diagram">t0: T1持A   T2持B
+t1: T1等B   T2等A   ← 互锁成形
+t2: (永久阻塞)</pre>
+      </div>
+    </section>
+
+    <!-- 卡片 3：最小可运行代码 -->
+    <section class="card">
+      <span class="tag">最小可运行代码</span>
+      <h2>跑一遍就明白</h2>
+      <p>复制即可运行的最小示例（基础层）；下方附运行预期与"这行对应概念哪一点"。</p>
+<pre><code><span class="k">def</span> demo():
+    <span class="c"># 关键一行：对应概念核心</span>
+    <span class="k">return</span> <span class="n">42</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">print</span>(demo())</code></pre>
+      <p class="run">42（说明这行代码对应概念的哪个关键点）</p>
+
+      <div class="adv" data-depth="1">
+        <p>进阶代码（难度=中/难时显示）：加入检测/规避逻辑，例如用 <code>timeout</code> 或统一加锁顺序破除死锁。</p>
+      </div>
+    </section>
+
+    <!-- 卡片 4：学生常见误解 -->
+    <section class="card">
+      <span class="tag">学生常见误解</span>
+      <h2>别踩这些坑</h2>
+      <ul class="miscon">
+        <li><span class="mis">误解：</span>学生以为…<br><span class="fix">正解：</span>实际上…</li>
+        <li><span class="mis">误解：</span>学生以为…<br><span class="fix">正解：</span>实际上…</li>
+      </ul>
+
+      <div class="adv" data-depth="1">
+        <ul class="miscon">
+          <li><span class="mis">误解（中/难）：</span>…<br><span class="fix">正解：</span>…</li>
+        </ul>
+      </div>
+      <div class="callout" data-aud="自学者"><span class="who">自学提醒</span>建议先跑通基础代码再读进阶，避免被术语劝退。</div>
+    </section>
+
+  </div>
+
+  <footer class="doc-foot">概念讲解卡片 · 四角度：生活类比 / 示意图 / 最小代码 / 常见误解 ｜ 支持受众 / 难度筛选</footer>
+</div>
+
+<script>
+(function(){
+  var bar = document.getElementById('controls');
+  var defAud = bar.getAttribute('data-default-aud') || '大学生';
+  var defDiff = parseInt(bar.getAttribute('data-default-diff') || '1', 10);
+
+  var chipAud = document.getElementById('chip-aud');
+  var chipDiff = document.getElementById('chip-diff');
+  var diffNames = {0:'易',1:'中',2:'难'};
+
+  function apply(){
+    // 难度：data-depth<=当前难度 的 .adv 显示
+    document.querySelectorAll('.adv').forEach(function(el){
+      var d = parseInt(el.getAttribute('data-depth')||'0',10);
+      el.classList.toggle('show', d <= defDiff);
+    });
+    // 受众：data-aud 匹配的 .callout 显示
+    document.querySelectorAll('.callout').forEach(function(el){
+      el.classList.toggle('show', el.getAttribute('data-aud') === defAud);
+    });
+    chipAud.textContent = '受众：' + defAud;
+    chipDiff.textContent = '难度：' + diffNames[defDiff];
+    // 按钮高亮
+    document.querySelectorAll('[data-aud]').forEach(function(b){
+      if(b.classList.contains('ctrl-btn')) b.classList.toggle('active', b.getAttribute('data-aud')===defAud);
+    });
+    document.querySelectorAll('[data-diff]').forEach(function(b){
+      if(b.classList.contains('ctrl-btn')) b.classList.toggle('active', parseInt(b.getAttribute('data-diff'),10)===defDiff);
+    });
+  }
+
+  bar.querySelectorAll('[data-aud]').forEach(function(b){
+    b.addEventListener('click', function(){ defAud = b.getAttribute('data-aud'); apply(); });
+  });
+  bar.querySelectorAll('[data-diff]').forEach(function(b){
+    b.addEventListener('click', function(){ defDiff = parseInt(b.getAttribute('data-diff'),10); apply(); });
+  });
+
+  apply();
+})();
+</script>
+</body>
+</html>
